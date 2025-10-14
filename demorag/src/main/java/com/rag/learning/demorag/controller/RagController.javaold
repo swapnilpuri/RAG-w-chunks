@@ -1,0 +1,27 @@
+package com.rag.learning.demorag.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.rag.learning.demorag.service.RagService;
+
+
+@RestController
+@RequestMapping("/api/rag/v1")
+public class RagController {
+
+    private final RagService ragService;
+
+    public RagController(RagService ragService) {
+        this.ragService = ragService;
+    }
+
+    @GetMapping("/ask")
+    public String  askDocument(@RequestParam (value = "query", defaultValue = "What is RAG?") String query) {
+        return ragService.generateResponse(query);
+        
+    }
+    
+}
