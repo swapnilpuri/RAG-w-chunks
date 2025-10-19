@@ -1,0 +1,79 @@
+<div class="chat-container">
+  <div class="chat-header">
+    <h1>{{ title() }}</h1>
+  </div>
+
+  <div class="messages-container">
+    <div class="messages-wrapper">
+      @if (messages.length === 0) {
+        <div class="empty-state">
+          <div class="empty-icon">💬</div>
+          <h2>Start a conversation</h2>
+          <p>Type your message below to begin chatting</p>
+        </div>
+      }
+      
+      @for (message of messages; track message.timestamp) {
+        <div class="message" [class.user-message]="message.role === 'user'" [class.assistant-message]="message.role === 'assistant'">
+          <div class="message-avatar">
+            @if (message.role === 'user') {
+              <span class="avatar-icon">👤</span>
+            } @else {
+              <span class="avatar-icon">🤖</span>
+            }
+          </div>
+          <div class="message-content">
+            <div class="message-header">
+              <span class="message-role">{{ message.role === 'user' ? 'You' : 'Assistant' }}</span>
+              <span class="message-time">{{ message.timestamp | date:'short' }}</span>
+            </div>
+            <div class="message-text">{{ message.content }}</div>
+          </div>
+        </div>
+      }
+
+      @if (isLoading) {
+        <div class="message assistant-message">
+          <div class="message-avatar">
+            <span class="avatar-icon">🤖</span>
+          </div>
+          <div class="message-content">
+            <div class="message-header">
+              <span class="message-role">Assistant</span>
+            </div>
+            <div class="message-text typing-indicator">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="input-container">
+    <div class="input-wrapper">
+      <textarea 
+        [(ngModel)]="userInput"
+        (keydown)="handleKeyPress($event)"
+        placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
+        rows="3"
+        class="message-input"
+        [disabled]="isLoading"
+      ></textarea>
+      <button 
+        (click)="sendMessage()" 
+        class="send-button"
+        [disabled]="!userInput.trim() || isLoading"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"></line>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<router-outlet />

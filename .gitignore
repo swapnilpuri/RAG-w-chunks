@@ -1,0 +1,47 @@
+# Angular (chat-ui)
+chat-ui/node_modules/
+chat-ui/dist/
+chat-ui/.angular/
+chat-ui/*.log
+chat-ui/npm-debug.log*
+chat-ui/yarn-debug.log*
+chat-ui/yarn-error.log*
+
+# Maven (demorag & document-streaming-ingestion-service)
+**/target/
+**/.mvn/
+**/mvnw
+**/mvnw.cmd
+**/*.iml
+**/*.iws
+**/*.ipr
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build outputs
+build/
+dist/
+out/
