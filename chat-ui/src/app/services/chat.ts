@@ -18,6 +18,6 @@ export class Chat {
   constructor(private http: HttpClient) { }
 
   sendMessage(message: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/api/chat`, { message });
+    return this.http.post(`${this.apiUrl}/api/rag/v1/ask`, { query: message });
   }
 }

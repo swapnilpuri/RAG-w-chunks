@@ -47,7 +47,7 @@ public class DocumentIngestionRoute extends RouteBuilder {
                 streamingIngestionService.ingestDocumentStreaming(file, filename, fileType);
                 
                 exchange.getIn().setHeader("ingestionStatus", "SUCCESS");
-                exchange.getIn().setBody("Document ingested successfully: " + filename);
+                // exchange.getIn().setBody("Document ingested successfully: " + filename);
             })
             .log("Document ingestion completed: ${header.filename}")
             .to("direct:ingestion-success");
@@ -55,7 +55,7 @@ public class DocumentIngestionRoute extends RouteBuilder {
         // Success handler
         from("direct:ingestion-success")
             .routeId("ingestion-success-handler")
-            .log("Successfully processed: ${body}")
+            .log("Successfully processed")
             .toD("file:{{document.archive.path}}?fileName=${header.CamelFileName}")
             .process(exchange -> {
                 // Delete original file after successful copy
@@ -65,7 +65,7 @@ public class DocumentIngestionRoute extends RouteBuilder {
                     originalFile.delete();
                     log.info("Deleted original file: {}", originalFile.getName());
                 }
-            });;
+            });
         
         // Error handler
         from("direct:ingestion-error")

@@ -1,0 +1,25 @@
+SELECT id,
+       document_id,
+       chunk_index,
+       content,
+       embedding,
+       token_count,
+       metadata,
+       created_at
+FROM public.document_chunks
+LIMIT 1000;
+
+SELECT id,
+       filename,
+       file_type,
+       total_chunks,
+       metadata,
+       ingested_at
+FROM public.document_master
+LIMIT 1000;
+
+DELETE FROM public.document_chunks;
+DELETE FROM public.document_master;
+
+TRUNCATE TABLE public.document_chunks RESTART IDENTITY;
+TRUNCATE TABLE public.document_master RESTART IDENTITY CASCADE;

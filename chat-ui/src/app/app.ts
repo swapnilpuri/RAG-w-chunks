@@ -48,7 +48,7 @@ export class App {
         console.error('Error sending message:', error);
         const errorMessage: Message = {
           role: 'assistant',
-          content: 'Sorry, there was an error processing your request. Please make sure the backend server is running.',
+          content: `Sorry, there was an error processing your request. Please make sure the backend server is running. ${error.message || error.statusText || JSON.stringify(error)}`,
           timestamp: new Date()
         };
         this.messages.push(errorMessage);
