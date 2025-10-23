@@ -1,0 +1,45 @@
+@startuml
+title "RAG from Scratch"
+
+rectangle "Document" as document<<Initial document to be processed>>
+rectangle "Text" as text<<Parsed text from the document>>
+rectangle "Chunks" as chunks<<Text divided into chunks>>
+rectangle "Embedding Model" as embeddingModel<<Model to encode text into embeddings>>
+rectangle "Embeddings" as embeddings<<Encoded text as embeddings>>
+database "PGVector Vector database" as pgvectorVectorDatabase<<Storage for document embeddings>>
+actor "User" as user<<Person querying the system>>
+rectangle "Query" as query<<User's query>>
+rectangle "Embedding" as embedding<<Encoded query as embeddings>>
+rectangle "Relevant chunks" as relevantChunks<<Chunks relevant to the query>>
+rectangle "User query" as userQuery<<Query from the user>>
+rectangle "Prompt (query + context)" as prompt<<Combined query and context>>
+rectangle "LLM" as llm<<Large Language Model>>
+rectangle "Response" as response<<Generated response>>
+
+document --> text : Parse
+text --> chunks : Chunk
+chunks --> embeddingModel : Encode
+embeddingModel --> embeddings : Encode
+embeddings --> pgvectorVectorDatabase : Store
+user --> query : Gets
+query --> embeddingModel : Encode
+embedding --> pgvectorVectorDatabase : Similarity search for relevant chunks
+pgvectorVectorDatabase --> relevantChunks : Returns
+relevantChunks --> prompt : Combine
+userQuery --> prompt : Augment
+prompt --> llm : Feed
+llm --> response : Generate
+
+legend
+- The 'Document' is parsed into 'Text'.
+- The 'Text' is divided into 'Chunks'.
+- 'Chunks' are encoded by the 'Embedding Model' into 'Embeddings'.
+- 'Embeddings' are stored in the 'PGVector Vector database'.
+- A 'User' provides a 'Query'.
+- The 'Query' is encoded by the 'Embedding model' into 'Embedding'.
+- 'Embedding' is used to perform a similarity search in the 'PGVector Vector database' for 'Relevant chunks'.
+- 'Relevant chunks' are combined with 'User query' to form a 'Prompt (query + context)'.
+- The 'Prompt (query + context)' is fed into the 'LLM'.
+- The 'LLM' generates a 'Response'.
+end legend
+@enduml

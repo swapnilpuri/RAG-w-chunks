@@ -1,0 +1,99 @@
+@startuml RAG_from_Scratch
+!define RECTANGLE_COLOR #FF6B6B
+!define BACKGROUND_COLOR #E8DCC8
+
+skinparam backgroundColor BACKGROUND_COLOR
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+skinparam linetype ortho
+
+title RAG from Scratch
+' Top level workflow
+together {
+  rectangle "Indexing" as idx #White
+  rectangle "Retrieval" as ret #White
+  rectangle "Augmented" as aug #White
+  rectangle "Generation" as gen #White
+}
+
+
+idx -right[dashed]-> ret 
+ret -right[dashed]-> aug
+aug -right[dashed]-> gen
+
+' Spacer to separate top workflow from detailed sections
+idx -[hidden]up-> IndexingSection
+ret -[hidden]up-> RetrievalSection
+aug -[hidden]up-> AugmentedSection
+gen -[hidden]up-> GenerationSection
+
+' Indexing Section
+package "Indexing" as IndexingSection {
+  component "Document" as doc1 #White
+  component "Text" as text1 #White
+  component "Chunks" as chunks1 #White
+  component "Embedding Model" as embed1 #White
+  component "Embeddings" as embeddings1 #White
+  database "PGVector\n database" as PGVector1 #White
+  
+  doc1 -down-> text1 : <color:RECTANGLE_COLOR>Parse</color>
+  text1 -down-> chunks1 : <color:RECTANGLE_COLOR>chunk</color>
+  chunks1 -down-> embed1 : <color:RECTANGLE_COLOR>encode</color>
+  embed1 -down-> embeddings1
+  embeddings1 -down-> PGVector1 : <color:RECTANGLE_COLOR>store</color>
+}
+
+' Retrieval Section
+package "Retrieval (R)" as RetrievalSection {
+  actor "User" as user #White
+  component "Query" as query #White
+  component "Embedding model" as embed2 #White
+  component "Embedding" as embedding2 #White
+  database "PGVector\nVector database" as PGVector2 #White
+  component "Relevant chunks" as chunks2 #White
+  
+  user -down-> query : <color:RECTANGLE_COLOR>gets</color>
+  query -down-> embed2 : <color:RECTANGLE_COLOR>encode</color>
+  embed2 -down-> embedding2
+  embedding2 -down-> PGVector2
+  PGVector2 -down-> chunks2 : <color:RECTANGLE_COLOR>returns</color>
+}
+
+' Augmented Section
+package "Augmented (A)" as AugmentedSection {
+  component "Relevant chunks" as chunks3 #White
+  component "Document" as doc2 #White
+  component "User\nquery" as userq #White
+  component "Prompt\n(query + context)" as prompt1 #White
+  
+  chunks3 -down-> doc2 : <color:RECTANGLE_COLOR>combine</color>
+  doc2 -down-> prompt1 : <color:RECTANGLE_COLOR>augment</color>
+  userq -down-> prompt1 : <color:RECTANGLE_COLOR>augment</color>
+}
+
+' Generation Section
+package "Generation (G)" as GenerationSection {
+  component "Prompt\n(query + context)" as prompt2 #White
+  component "LLM" as llm #White
+  component "Response" as response #White
+  
+  prompt2 -down-> llm : <color:RECTANGLE_COLOR>feed</color>
+  llm -down-> response
+}
+
+' Connect sections
+IndexingSection -[hidden]right- RetrievalSection
+RetrievalSection -[hidden]right- AugmentedSection
+AugmentedSection -[hidden]right- GenerationSection
+
+note right of PGVector1
+  Vector storage for
+  document embeddings
+end note
+
+note right of PGVector2
+  Similarity search
+  for relevant chunks
+end note
+
+@enduml

@@ -1,0 +1,62 @@
+@startuml rag_service
+
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+
+title RAG Service Architecture
+
+' API Layer
+rectangle "REST API Layer" as api {
+    component "RAGController" as controller #lightblue
+    component "AskEndpoint /api/rag/v1/ask" as endpoint
+}
+
+' Service Layer
+rectangle "Service Layer" as service {
+    component "RAGService" as ragService
+    component "EmbeddingService" as embeddingService
+    component "QueryService" as queryService
+}
+
+' Vector Search
+rectangle "Vector Search" as vectorSearch {
+    component "PGVectorSearch" as pgvector
+    component "Similarity Search" as similarity
+    note right: "Cosine similarity\nk=5 nearest chunks"
+}
+
+' LLM Integration
+rectangle "LLM Integration" as llm {
+    component "Google Gemini Pro" as gemini
+    component "Prompt Template" as prompt
+    note right: "System prompt +\nContext + Query"
+}
+
+' Database
+database "PostgreSQL + pgvector" as db {
+    component "document_master" as docs
+    component "document_chunks" as chunks
+    note right: "Vector embeddings\nwith metadata"
+}
+
+' Flow connections
+controller --> endpoint : REST request
+endpoint --> ragService : User query
+
+ragService --> embeddingService : Generate query embedding
+embeddingService --> gemini : Encode query
+
+ragService --> queryService : Search similar chunks
+queryService --> pgvector : Vector similarity search
+pgvector --> similarity : Find nearest neighbors
+similarity --> chunks : Retrieve chunks
+
+ragService --> prompt : Build prompt
+prompt --> gemini : Generate response
+
+' Return flow
+gemini --> ragService : LLM response
+ragService --> endpoint : JSON response
+
+@enduml

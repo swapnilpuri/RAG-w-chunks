@@ -1,0 +1,61 @@
+@startuml Overall_RAG_Sequence
+title Overall RAG Flow - Chat UI, Backend, Ingestion, PGVector, Gemini
+
+actor User
+participant "Chat UI\n(Angular)" as ChatUI
+participant "RAG Backend\n(demorag)" as Backend [[demoragbackendservice/rag_service.svg]]
+participant "Embedding Service" as Embedding
+participant "PGVector DB\n(pgvector)" as PGVector
+participant "Gemini LLM" as Gemini
+participant "Document Ingestion\n(document-streaming-ingestion)" as Ingestion [[documentingestionservice/document_streaming_ingestion.svg]]
+
+== User query flow ==
+User -> ChatUI : Enter query
+activate ChatUI
+ChatUI -> Backend : POST /api/rag/v1/ask { query }
+deactivate ChatUI
+
+activate Backend
+Backend -> Embedding : generateEmbedding(query)
+activate Embedding
+Embedding --> Backend : embedding
+deactivate Embedding
+
+Backend -> PGVector : similaritySearch(embedding, k=5)
+activate PGVector
+PGVector --> Backend : relevant_chunks
+deactivate PGVector
+
+Backend -> Backend : buildPrompt(query + relevant_chunks)
+Backend -> Gemini : generateResponse(prompt)
+activate Gemini
+Gemini --> Backend : generated_text
+deactivate Gemini
+
+Backend --> ChatUI : 200 OK { answer }
+deactivate Backend
+
+ChatUI -> User : Display answer
+
+== Document ingestion -> vector DB ==
+note over Ingestion: watches input folder\n(pdf, docx, xlsx)
+Ingestion -> Ingestion : streamRead(file)
+activate Ingestion
+Ingestion -> Ingestion : chunkText(streamedData)
+Ingestion -> Embedding : generateEmbedding(chunk)
+activate Embedding
+Embedding --> Ingestion : chunk_embedding
+deactivate Embedding
+
+Ingestion -> PGVector : storeChunkWithEmbedding(metadata, chunk, chunk_embedding)
+activate PGVector
+PGVector --> Ingestion : ack
+deactivate PGVector
+deactivate Ingestion
+
+note right of PGVector
+  PGVector holds document_chunks + embeddings
+  used by Backend for retrieval
+end note
+
+@enduml

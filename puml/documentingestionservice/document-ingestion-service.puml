@@ -1,0 +1,75 @@
+@startuml document_streaming_ingestion
+
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 11
+
+title Document Streaming Ingestion Service
+
+' Input files
+rectangle "Input Files" as files {
+    file "PDF" as pdf
+    file "DOCX" as docx
+    file "XLSX" as xlsx
+}
+
+' Apache Camel Route
+rectangle "Apache Camel Route\n(DocumentIngestionRoute)" as camel {
+    component "File Polling" as polling
+    component "File Type Detection" as detection
+    component "Route Handler" as handler
+}
+
+' Streaming Processing
+rectangle "Streaming Document Processor" as processor {
+    component "PDFStreamReader" as pdfreader
+    component "DocxStreamReader" as docxreader
+    component "XlsxStreamReader" as xlsxreader
+}
+
+' Chunking Service
+rectangle "Streaming Chunking Service" as chunking {
+    component "Buffer (8KB)" as buffer
+    component "Chunk Creation" as chunks #lightgreen
+    note right: "1000 chars\n200 char overlap"
+}
+
+' Embedding Service
+rectangle "Embedding Service" as embedding {
+    component "Gemini API" as gemini
+    component "Vector Generation" as vectors
+    note right: "768 dimensions"
+}
+
+' Database
+database "PostgreSQL + pgvector" as db {
+    component "document_master" as docs
+    component "document_chunks" as docchunks
+    note right: "Embeddings stored\nwith IVFFlat index"
+}
+
+' Flow connections
+pdf --> polling
+docx --> polling
+xlsx --> polling
+
+polling --> detection
+detection --> handler
+
+handler --> pdfreader : PDF files
+handler --> docxreader : DOCX files
+handler --> xlsxreader : XLSX files
+
+pdfreader --> buffer
+docxreader --> buffer
+xlsxreader --> buffer
+
+buffer --> chunks
+
+chunks --> gemini : Text chunks
+gemini --> vectors : Generate embeddings
+
+vectors --> docchunks : Store chunks & embeddings
+docchunks --> docs : Reference metadata
+
+@enduml
