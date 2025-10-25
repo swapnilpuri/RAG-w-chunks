@@ -26,7 +26,6 @@
                 <tag/>
                 <url/>
         </scm>
-
  <dependencies>
         <!-- Spring Boot Starter -->
         <dependency>
