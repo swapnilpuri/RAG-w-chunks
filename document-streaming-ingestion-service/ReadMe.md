@@ -152,27 +152,10 @@ LIMIT 5;
 
 ### Embedding Service
 
-⚠️ **The current `EmbeddingService` uses a simple hash-based approach for demonstration.**
-
-For production use, replace it with a real embedding model:
-
-#### Option 1: OpenAI Embeddings API
-```java
-// Add OpenAI Java SDK dependency
-// Call OpenAI API to generate embeddings
-```
-
-#### Option 2: Local Model (Sentence-BERT)
-```java
-// Use ONNX Runtime or DJL
-// Load a sentence-transformer model locally
-```
-
-#### Option 3: Hugging Face API
-```java
-// Call Hugging Face Inference API
-// Use models like 'sentence-transformers/all-MiniLM-L6-v2'
-```
+`EmbeddingService` calls the real Google Gemini embedding API (see
+`embedding.gemini.*` in `application.properties`) over OkHttp, with retry
+logic. Set `GOOGLE_API_KEY` as an environment variable before running —
+never commit a literal key into `application.properties`.
 
 ### Customizing Vector Dimensions
 

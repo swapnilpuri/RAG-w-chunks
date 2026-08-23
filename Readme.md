@@ -225,8 +225,8 @@ USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/rag-pipeline.git
-cd rag-pipeline
+git clone https://github.com/swapnilpuri/RAG-w-chunks.git
+cd RAG-w-chunks
 ```
 
 ### 2. Set Up PostgreSQL with pgvector
@@ -529,47 +529,42 @@ curl -G "http://localhost:8080/api/rag/v1/ask" \
 
 ## 📁 Project Structure
 
+This is a Maven multi-module project — see [MAVEN_STRUCTURE.md](MAVEN_STRUCTURE.md)
+for the full build details. The two Java services each own their half of the
+pipeline; the Angular app is an independent, standalone project.
+
 ```
-rag-pipeline/
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/rag/learning/demorag/
-│   │   │       ├── config/
-│   │   │       │   ├── EmbeddingConfig.java
-│   │   │       │   └── PGVectorType.java
-│   │   │       ├── controller/
-│   │   │       │   └── RagController.java
-│   │   │       ├── entity/
-│   │   │       │   ├── Document.java
-│   │   │       │   └── DocumentChunk.java
-│   │   │       ├── processor/
-│   │   │       │   └── StreamingDocumentProcessor.java
-│   │   │       ├── repository/
-│   │   │       │   ├── DocumentRepository.java
-│   │   │       │   └── DocumentChunkRepository.java
-│   │   │       ├── route/
-│   │   │       │   └── DocumentIngestionRoute.java
-│   │   │       └── service/
-│   │   │           ├── ChunkingService.java
-│   │   │           ├── EmbeddingService.java
-│   │   │           ├── EnhancedRagService.java
-│   │   │           ├── RagService.java
-│   │   │           ├── StreamingChunkingService.java
-│   │   │           └── StreamingIngestionService.java
-│   │   └── resources/
-│   │       ├── init.sql
-│   │       ├── application.properties
-│   │       └── rag/
-│   │           └── system-prompt-template.st
-│   └── test/
-│       └── java/
-│           └── com/rag/learning/demorag/
-│               └── RagServiceIntegrationTest.java
-├── documents/
-│   └── input/          # Place documents here for ingestion
-├── pom.xml
-└── README.md
+RAG-w-chunks/
+├── pom.xml                                    # Parent POM (shared dependency versions)
+│
+├── document-streaming-ingestion-service/      # INGESTION: watches a folder, chunks, embeds, stores
+│   ├── src/main/java/com/learning/rag/
+│   │   ├── config/            # EmbeddingConfig, HibernateConfig, PGVectorType
+│   │   ├── entity/             # Document, DocumentChunk
+│   │   ├── processor/         # StreamingDocumentProcessor (page-by-page PDF/DOCX/XLSX reads)
+│   │   ├── repository/        # DocumentRepository, DocumentChunkRepository
+│   │   ├── route/             # DocumentIngestionRoute (Apache Camel file-polling route)
+│   │   └── service/           # ChunkingService, StreamingChunkingService,
+│   │                           # StreamingIngestionService, EmbeddingService (Gemini)
+│   ├── src/main/resources/application.properties
+│   ├── init.sql
+│   ├── docker-compose.yaml
+│   └── knowledgebase/          # small curated sample docs (pdf/docx/xlsx)
+│
+├── demorag/                                   # QUERY & RETRIEVAL: the RAG API
+│   ├── src/main/java/com/rag/learning/demorag/
+│   │   ├── config/             # EmbeddingConfig, WebConfig, Config
+│   │   ├── controller/         # RagController, DebugController
+│   │   └── service/            # RagService (basic), EnhancedRagService (adjacent
+│   │                            # chunks + dedup + context optimization), EmbeddingService
+│   └── src/main/resources/
+│       ├── application.properties
+│       └── rag/system-prompt-template.st
+│
+└── chat-ui/                                   # Angular chat frontend (independent project)
+    └── src/app/
+        ├── services/chat.ts     # calls demorag's /api/rag/v1/ask
+        └── app.ts / app.html
 ```
 
 ## ⚡ Performance Considerations
@@ -718,9 +713,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📞 Support
 
-For questions or issues:
-- Open an issue in the [GitHub repository](https://github.com/yourusername/rag-pipeline/issues)
-- Email: your.email@example.com
+For questions or issues, open an issue in the [GitHub repository](https://github.com/swapnilpuri/RAG-w-chunks/issues).
 
 ## 🗺️ Roadmap
 
