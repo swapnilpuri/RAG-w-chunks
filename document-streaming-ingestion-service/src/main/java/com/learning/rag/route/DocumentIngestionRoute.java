@@ -80,7 +80,7 @@ public class DocumentIngestionRoute extends RouteBuilder {
                     originalFile.delete();
                     log.info("Deleted original file from input: {}", originalFile.getName());
                 }
-            });;
+            });
         
         // File polling route example (if you want to poll a directory)
         from("file:{{document.input.path}}"

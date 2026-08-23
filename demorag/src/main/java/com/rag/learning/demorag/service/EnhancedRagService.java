@@ -10,10 +10,8 @@ import org.springframework.ai.chat.prompt.SystemPromptTemplate;
 import org.springframework.ai.google.genai.GoogleGenAiChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -25,7 +23,7 @@ public class EnhancedRagService {
 
     private final GoogleGenAiChatModel chatModel;
     private final EmbeddingService embeddingService;
-    private final JdbcTemplate jdbcTemplate;
+    private final ChunkRetrievalService chunkRetrievalService;
 
     @Value("classpath:/rag/system-prompt-template.st")
     private Resource systemPromptTemplate;
@@ -35,19 +33,18 @@ public class EnhancedRagService {
 
     @Value("${rag.retrieval.similarity-threshold:0.3}")
     private double similarityThreshold;
-    
+
     @Value("${rag.retrieval.max-context-length:8000}")
     private int maxContextLength;
-    
+
     @Value("${rag.retrieval.fetch-adjacent-chunks:true}")
     private boolean fetchAdjacentChunks;
 
-    public EnhancedRagService(GoogleGenAiChatModel chatModel, 
-                             EmbeddingService embeddingService, 
-                             JdbcTemplate jdbcTemplate) {
+    public EnhancedRagService(GoogleGenAiChatModel chatModel, EmbeddingService embeddingService,
+                               ChunkRetrievalService chunkRetrievalService) {
         this.chatModel = chatModel;
         this.embeddingService = embeddingService;
-        this.jdbcTemplate = jdbcTemplate;
+        this.chunkRetrievalService = chunkRetrievalService;
     }
 
     /**
@@ -56,13 +53,13 @@ public class EnhancedRagService {
     public String generateResponse(String query) {
         log.info("=== Enhanced RAG Processing Started ===");
         log.info("Query: {}", query);
-        log.info("Config: topK={}, threshold={}, maxContext={}, adjacent={}", 
+        log.info("Config: topK={}, threshold={}, maxContext={}, adjacent={}",
             topK, similarityThreshold, maxContextLength, fetchAdjacentChunks);
-        
+
         try {
             // 1. Retrieve relevant chunks
             List<ChunkResult> relevantChunks = retrieveRelevantChunks(query);
-            
+
             if (relevantChunks.isEmpty()) {
                 log.warn("No chunks found for query");
                 return generateNoContextResponse(query);
@@ -80,14 +77,14 @@ public class EnhancedRagService {
 
             // 4. Build context with length constraints
             String context = buildOptimalContext(relevantChunks);
-            
+
             if (context.trim().isEmpty()) {
                 return generateNoContextResponse(query);
             }
 
             // 5. Generate response
             return generateLLMResponse(query, context);
-            
+
         } catch (Exception e) {
             log.error("Error during RAG processing", e);
             return generateErrorResponse(query, e);
@@ -101,61 +98,9 @@ public class EnhancedRagService {
         try {
             float[] queryEmbedding = embeddingService.generateEmbedding(query);
             log.info("Query embedding generated: {} dimensions", queryEmbedding.length);
-            
-            String vectorString = "[" + 
-                java.util.stream.IntStream.range(0, queryEmbedding.length)
-                    .mapToObj(i -> String.format("%.8f", queryEmbedding[i]))
-                    .collect(Collectors.joining(",")) + 
-                "]";
 
-            String sql = """
-                SELECT 
-                    dc.id,
-                    dc.document_id,
-                    dc.chunk_index,
-                    dc.content,
-                    dc.token_count,
-                    dc.metadata as chunk_metadata,
-                    dm.filename,
-                    dm.file_type,
-                    dm.total_chunks,
-                    dm.metadata as doc_metadata,
-                    (dc.embedding <#> ?::vector) AS distance
-                FROM document_chunks dc
-                JOIN document_master dm ON dc.document_id = dm.id
-                WHERE dc.embedding IS NOT NULL
-                ORDER BY dc.embedding <#> ?::vector
-                LIMIT ?
-                """;
-
-            org.postgresql.util.PGobject pgVector = new org.postgresql.util.PGobject();
-            pgVector.setType("vector");
-            pgVector.setValue(vectorString);
-
-            List<ChunkResult> chunks = jdbcTemplate.query(
-                sql,
-                ps -> {
-                    ps.setObject(1, pgVector);
-                    ps.setObject(2, pgVector);
-                    ps.setInt(3, topK * 2); // Fetch more for adjacent chunks
-                },
-                (rs, rowNum) -> {
-                    ChunkResult chunk = new ChunkResult();
-                    chunk.setId(rs.getString("id"));
-                    chunk.setDocumentId(rs.getString("document_id"));
-                    chunk.setChunkIndex(rs.getInt("chunk_index"));
-                    chunk.setContent(rs.getString("content"));
-                    chunk.setTokenCount(rs.getInt("token_count"));
-                    chunk.setChunkMetadata(rs.getString("chunk_metadata"));
-                    chunk.setFilename(rs.getString("filename"));
-                    chunk.setFileType(rs.getString("file_type"));
-                    chunk.setTotalChunks(rs.getInt("total_chunks"));
-                    chunk.setDocMetadata(rs.getString("doc_metadata"));
-                    chunk.setDistance(rs.getDouble("distance"));
-                    chunk.setSimilarity(-rs.getDouble("distance")); // Convert to similarity
-                    return chunk;
-                }
-            );
+            // Fetch more than topK so there's still `topK` left after threshold filtering
+            List<ChunkResult> chunks = chunkRetrievalService.searchSimilarChunks(queryEmbedding, topK * 2);
 
             // Filter by threshold
             List<ChunkResult> filtered = chunks.stream()
@@ -163,12 +108,12 @@ public class EnhancedRagService {
                 .limit(topK)
                 .collect(Collectors.toList());
 
-            log.info("Retrieved {} chunks (filtered from {} candidates)", 
+            log.info("Retrieved {} chunks (filtered from {} candidates)",
                 filtered.size(), chunks.size());
-            
-            filtered.forEach(chunk -> 
-                log.debug("Chunk: doc={}, idx={}, sim={:.3f}", 
-                    chunk.getFilename(), chunk.getChunkIndex(), chunk.getSimilarity()));
+
+            filtered.forEach(chunk ->
+                log.debug("Chunk: doc={}, idx={}, sim={}",
+                    chunk.getFilename(), chunk.getChunkIndex(), String.format("%.3f", chunk.getSimilarity())));
 
             return filtered;
 
@@ -198,26 +143,22 @@ public class EnhancedRagService {
 
             // Fetch previous chunk if exists
             if (chunk.getChunkIndex() > 0) {
-                ChunkResult prevChunk = fetchChunkByIndex(
-                    chunk.getDocumentId(), 
-                    chunk.getChunkIndex() - 1
-                );
-                if (prevChunk != null && chunkIds.add(prevChunk.getId())) {
-                    enrichedChunks.add(prevChunk);
-                    log.debug("Added previous chunk: idx={}", prevChunk.getChunkIndex());
-                }
+                chunkRetrievalService.findChunkByIndex(chunk.getDocumentId(), chunk.getChunkIndex() - 1)
+                    .filter(prevChunk -> chunkIds.add(prevChunk.getId()))
+                    .ifPresent(prevChunk -> {
+                        enrichedChunks.add(prevChunk);
+                        log.debug("Added previous chunk: idx={}", prevChunk.getChunkIndex());
+                    });
             }
 
             // Fetch next chunk if exists
             if (chunk.getChunkIndex() < chunk.getTotalChunks() - 1) {
-                ChunkResult nextChunk = fetchChunkByIndex(
-                    chunk.getDocumentId(), 
-                    chunk.getChunkIndex() + 1
-                );
-                if (nextChunk != null && chunkIds.add(nextChunk.getId())) {
-                    enrichedChunks.add(nextChunk);
-                    log.debug("Added next chunk: idx={}", nextChunk.getChunkIndex());
-                }
+                chunkRetrievalService.findChunkByIndex(chunk.getDocumentId(), chunk.getChunkIndex() + 1)
+                    .filter(nextChunk -> chunkIds.add(nextChunk.getId()))
+                    .ifPresent(nextChunk -> {
+                        enrichedChunks.add(nextChunk);
+                        log.debug("Added next chunk: idx={}", nextChunk.getChunkIndex());
+                    });
             }
         }
 
@@ -225,61 +166,16 @@ public class EnhancedRagService {
     }
 
     /**
-     * Fetch a specific chunk by document ID and chunk index
-     */
-    private ChunkResult fetchChunkByIndex(String documentId, int chunkIndex) {
-        String sql = """
-            SELECT 
-                dc.id,
-                dc.document_id,
-                dc.chunk_index,
-                dc.content,
-                dc.token_count,
-                dc.metadata as chunk_metadata,
-                dm.filename,
-                dm.file_type,
-                dm.total_chunks,
-                dm.metadata as doc_metadata
-            FROM document_chunks dc
-            JOIN document_master dm ON dc.document_id = dm.id
-            WHERE dc.document_id = ? AND dc.chunk_index = ?
-            """;
-
-        try {
-            return jdbcTemplate.queryForObject(sql, 
-                (rs, rowNum) -> {
-                    ChunkResult chunk = new ChunkResult();
-                    chunk.setId(rs.getString("id"));
-                    chunk.setDocumentId(rs.getString("document_id"));
-                    chunk.setChunkIndex(rs.getInt("chunk_index"));
-                    chunk.setContent(rs.getString("content"));
-                    chunk.setTokenCount(rs.getInt("token_count"));
-                    chunk.setChunkMetadata(rs.getString("chunk_metadata"));
-                    chunk.setFilename(rs.getString("filename"));
-                    chunk.setFileType(rs.getString("file_type"));
-                    chunk.setTotalChunks(rs.getInt("total_chunks"));
-                    chunk.setDocMetadata(rs.getString("doc_metadata"));
-                    chunk.setSimilarity(0.0); // Adjacent chunks have no similarity score
-                    return chunk;
-                },
-                documentId, chunkIndex);
-        } catch (Exception e) {
-            log.debug("Chunk not found: doc={}, idx={}", documentId, chunkIndex);
-            return null;
-        }
-    }
-
-    /**
      * Remove duplicate chunks
      */
     private List<ChunkResult> deduplicateChunks(List<ChunkResult> chunks) {
         Map<String, ChunkResult> uniqueChunks = new LinkedHashMap<>();
-        
+
         for (ChunkResult chunk : chunks) {
             String key = chunk.getDocumentId() + "_" + chunk.getChunkIndex();
             uniqueChunks.putIfAbsent(key, chunk);
         }
-        
+
         return new ArrayList<>(uniqueChunks.values());
     }
 
@@ -309,45 +205,45 @@ public class EnhancedRagService {
 
         for (Map.Entry<String, List<ChunkResult>> entry : sortedDocs) {
             List<ChunkResult> docChunks = entry.getValue();
-            
+
             // Sort chunks by index for proper reading order
             docChunks.sort(Comparator.comparingInt(ChunkResult::getChunkIndex));
-            
+
             String filename = docChunks.get(0).getFilename();
             String header = String.format("=== Source: %s ===\n\n", filename);
-            
+
             if (currentLength + header.length() > maxContextLength) {
                 log.warn("Context length limit reached, truncating at {} characters", currentLength);
                 break;
             }
-            
+
             contextBuilder.append(header);
             currentLength += header.length();
 
             for (ChunkResult chunk : docChunks) {
                 String chunkContent = chunk.getContent() + "\n\n";
-                
+
                 if (currentLength + chunkContent.length() > maxContextLength) {
-                    log.warn("Context length limit reached at chunk {}, truncating", 
+                    log.warn("Context length limit reached at chunk {}, truncating",
                         chunk.getChunkIndex());
                     break;
                 }
-                
+
                 contextBuilder.append(chunkContent);
                 currentLength += chunkContent.length();
-                
-                log.debug("Added chunk {} from {} (sim={:.3f}, length={})", 
-                    chunk.getChunkIndex(), filename, chunk.getSimilarity(), 
+
+                log.debug("Added chunk {} from {} (sim={}, length={})",
+                    chunk.getChunkIndex(), filename, String.format("%.3f", chunk.getSimilarity()),
                     chunkContent.length());
             }
-            
+
             contextBuilder.append("---\n\n");
             currentLength += 5;
         }
 
-        log.info("Context built: {} chars from {} documents", 
+        log.info("Context built: {} chars from {} documents",
             currentLength, chunksByDoc.size());
-        
+
         return contextBuilder.toString();
     }
 
@@ -359,9 +255,9 @@ public class EnhancedRagService {
         Message systemMessage = systemPrompt.createMessage(Map.of("context", context));
         UserMessage userMessage = new UserMessage(query);
         Prompt prompt = new Prompt(List.of(systemMessage, userMessage));
-        
+
         log.info("Calling LLM with context length: {}", context.length());
-        
+
         return chatModel.stream(prompt)
             .map(chatResponse -> chatResponse.getResult().getOutput().getText())
             .reduce("", (a, b) -> a + b)
@@ -385,21 +281,5 @@ public class EnhancedRagService {
             .map(r -> r.getResult().getOutput().getText())
             .reduce("", String::concat)
             .block();
-    }
-
-    @Data
-    private static class ChunkResult {
-        private String id;
-        private String documentId;
-        private Integer chunkIndex;
-        private String content;
-        private Integer tokenCount;
-        private String chunkMetadata;
-        private String filename;
-        private String fileType;
-        private Integer totalChunks;
-        private String docMetadata;
-        private Double distance;
-        private Double similarity;
     }
 }
