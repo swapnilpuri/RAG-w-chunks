@@ -40,7 +40,6 @@ public class EmbeddingService {
      * Generate embeddings using Gemini API
      */
     public float[] generateEmbedding(String text) throws IOException {
-        log.info("config.getGemini().getApiKey() {}", config.getGemini().getApiKey());
         log.debug("Generating embedding for text of length {}", text.length());
         if (text == null || text.trim().isEmpty()) {
             throw new IllegalArgumentException("Text cannot be empty");
