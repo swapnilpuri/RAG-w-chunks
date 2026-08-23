@@ -42,10 +42,18 @@ public class ChunkingService {
                 chunks.add(chunk);
                 log.debug("Created chunk {}: {} characters", chunks.size(), chunk.length());
             }
-            
+
+            // Once end reaches the end of the text, this was the final chunk.
+            // Stop here -- otherwise, once `end` saturates at textLength on a
+            // later iteration too, `end - CHUNK_OVERLAP` stops advancing and
+            // the loop never terminates (it re-emits the same tail chunk
+            // forever until the heap is exhausted).
+            if (end >= textLength) {
+                break;
+            }
+
             // Move start position with overlap
             start = end - CHUNK_OVERLAP;
-            if (start >= textLength) break;
         }
         
         log.info("Split text into {} chunks", chunks.size());
