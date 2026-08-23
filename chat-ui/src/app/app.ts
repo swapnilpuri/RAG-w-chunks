@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Chat, Message } from './services/chat';
 
 @Component({
@@ -38,17 +39,18 @@ export class App {
       next: (response) => {
         const assistantMessage: Message = {
           role: 'assistant',
-          content: response.response || response.message || 'No response',
+          content: response.response || 'No response',
           timestamp: new Date()
         };
         this.messages.push(assistantMessage);
         this.isLoading = false;
       },
-      error: (error) => {
+      error: (error: HttpErrorResponse) => {
         console.error('Error sending message:', error);
+        const detail = error.error?.message || error.message || error.statusText || 'Unknown error';
         const errorMessage: Message = {
           role: 'assistant',
-          content: `Sorry, there was an error processing your request. Please make sure the backend server is running. ${error.message || error.statusText || JSON.stringify(error)}`,
+          content: `Sorry, there was an error processing your request. Please make sure the backend server is running. ${detail}`,
           timestamp: new Date()
         };
         this.messages.push(errorMessage);

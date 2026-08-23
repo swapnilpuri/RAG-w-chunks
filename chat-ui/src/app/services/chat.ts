@@ -9,6 +9,22 @@ export interface Message {
   timestamp: Date;
 }
 
+/**
+ * Response shape returned by demorag's /api/rag/v1/ask (and ask-enhanced)
+ * endpoints. See the root README's "API Reference" section.
+ */
+export interface RagAskResponse {
+  query: string;
+  response: string;
+  processingTimeMs: number;
+  service: 'basic' | 'enhanced';
+  features?: {
+    adjacentChunks: boolean;
+    contextOptimization: boolean;
+    deduplication: boolean;
+  };
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -17,7 +33,7 @@ export class Chat {
 
   constructor(private http: HttpClient) { }
 
-  sendMessage(message: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/api/rag/v1/ask`, { query: message });
+  sendMessage(message: string): Observable<RagAskResponse> {
+    return this.http.post<RagAskResponse>(`${this.apiUrl}/api/rag/v1/ask`, { query: message });
   }
 }
