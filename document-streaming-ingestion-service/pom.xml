@@ -158,6 +158,12 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
+        <!-- Loads .env from the working directory at startup -->
+        <dependency>
+            <groupId>me.paulschwarz</groupId>
+            <artifactId>spring-dotenv</artifactId>
+        </dependency>
     </dependencies>
 
 

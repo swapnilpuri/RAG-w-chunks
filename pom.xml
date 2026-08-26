@@ -43,6 +43,7 @@
         <commons-compress.version>1.24.0</commons-compress.version>
         <commons-collections4.version>4.4</commons-collections4.version>
         <google-cloud-aiplatform.version>3.34.0</google-cloud-aiplatform.version>
+        <spring-dotenv.version>4.0.0</spring-dotenv.version>
     </properties>
     
     <!-- Dependency Management -->
@@ -123,6 +124,13 @@
                 <groupId>com.google.cloud</groupId>
                 <artifactId>google-cloud-aiplatform</artifactId>
                 <version>${google-cloud-aiplatform.version}</version>
+            </dependency>
+
+            <!-- Loads a .env file from the working directory into the Spring Environment -->
+            <dependency>
+                <groupId>me.paulschwarz</groupId>
+                <artifactId>spring-dotenv</artifactId>
+                <version>${spring-dotenv.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
