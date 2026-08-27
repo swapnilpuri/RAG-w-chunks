@@ -7,19 +7,19 @@
     <div class="messages-wrapper">
       @if (messages.length === 0) {
         <div class="empty-state">
-          <div class="empty-icon">💬</div>
+          <div class="empty-icon" aria-hidden="true">Chat</div>
           <h2>Start a conversation</h2>
           <p>Type your message below to begin chatting</p>
         </div>
       }
-      
+
       @for (message of messages; track message.timestamp) {
         <div class="message" [class.user-message]="message.role === 'user'" [class.assistant-message]="message.role === 'assistant'">
           <div class="message-avatar">
             @if (message.role === 'user') {
-              <span class="avatar-icon">👤</span>
+              <span class="avatar-icon" aria-hidden="true">U</span>
             } @else {
-              <span class="avatar-icon">🤖</span>
+              <span class="avatar-icon" aria-hidden="true">AI</span>
             }
           </div>
           <div class="message-content">
@@ -35,7 +35,7 @@
       @if (isLoading) {
         <div class="message assistant-message">
           <div class="message-avatar">
-            <span class="avatar-icon">🤖</span>
+            <span class="avatar-icon" aria-hidden="true">AI</span>
           </div>
           <div class="message-content">
             <div class="message-header">
@@ -54,7 +54,7 @@
 
   <div class="input-container">
     <div class="input-wrapper">
-      <textarea 
+      <textarea
         [(ngModel)]="userInput"
         (keydown)="handleKeyPress($event)"
         placeholder="Type your message here... (Press Enter to send, Shift+Enter for new line)"
@@ -62,12 +62,13 @@
         class="message-input"
         [disabled]="isLoading"
       ></textarea>
-      <button 
-        (click)="sendMessage()" 
+      <button
+        (click)="sendMessage()"
         class="send-button"
         [disabled]="!userInput.trim() || isLoading"
+        aria-label="Send message"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="22" y1="2" x2="11" y2="13"></line>
           <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
         </svg>

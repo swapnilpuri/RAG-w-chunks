@@ -1,0 +1,22 @@
+﻿{
+  "app-a-payment-gateway.md": {
+    "domain": "payments",
+    "expected_topics": ["payment methods", "Kafka", "idempotency", "bank callbacks", "availability"]
+  },
+  "app-b-customer-loyalty.md": {
+    "domain": "customer loyalty",
+    "expected_topics": ["points", "tiers", "campaign rules", "refund reversal", "expiration"]
+  },
+  "app-c-hr-onboarding.md": {
+    "domain": "HR onboarding",
+    "expected_topics": ["workflow stages", "identity setup", "equipment", "compliance", "data handling"]
+  },
+  "incident-reports.md": {
+    "domain": "operations",
+    "expected_topics": ["root cause", "mitigation", "follow-up actions", "severity"]
+  },
+  "architecture-decisions.md": {
+    "domain": "architecture",
+    "expected_topics": ["pgvector", "chunk retrieval", "synthetic data", "tradeoffs"]
+  }
+}

@@ -1,68 +1,84 @@
-# Chat UI - Angular Chat Interface
+# Chat UI Deployment
 
-This is an Angular-based chat interface with a Claude.ai-style UI for your Spring REST service.
+This Angular application can be deployed to any static hosting platform, such as Netlify, Vercel, AWS S3 + CloudFront, Azure Static Web Apps, or GitHub Pages.
 
-## Features
-
-- Clean, modern chat interface similar to Claude.ai
-- Multi-line text input with Enter to send, Shift+Enter for new line
-- Conversation history with user and assistant messages
-- Typing indicator while waiting for responses
-- Responsive design that works on desktop and mobile
-- Error handling with user-friendly messages
-
-## Local Development
-
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-2. Start the development server:
-   ```bash
-   npm start
-   ```
-
-3. Open your browser to http://localhost:4200/
-
-## Configuration
-
-The backend API URL is configured in `src/environments/environment.ts`:
-- Default: `http://localhost:8080`
-- Update this to point to your Spring REST service endpoint
-
-The application expects the backend to have an endpoint at `/api/chat` that accepts POST requests with:
-```json
-{
-  "message": "user message here"
-}
-```
-
-And returns a response with:
-```json
-{
-  "response": "assistant response here"
-}
-```
-
-## Building for Production
+## Build Command
 
 ```bash
+npm install
 npm run build
 ```
 
-The build artifacts will be stored in the `dist/chat-ui/browser/` directory.
+Build output:
 
-## Deployment
+```text
+dist/chat-ui/browser/
+```
 
-The application can be deployed to any static hosting service (Netlify, Vercel, AWS S3, etc.).
+## Backend URL
 
-Make sure to update the `environment.prod.ts` file with your production backend URL before building.
+Before building for production, update:
 
-## Project Structure
+```text
+src/environments/environment.prod.ts
+```
 
-- `src/app/app.ts` - Main component with chat logic
-- `src/app/app.html` - Chat interface template
-- `src/app/app.css` - Chat interface styles
-- `src/app/services/chat.ts` - Service for API communication
-- `src/environments/` - Environment configuration files
+Example:
+
+```typescript
+export const environment = {
+  production: true,
+  apiUrl: 'https://your-rag-api.example.com'
+};
+```
+
+The deployed backend must expose:
+
+```text
+POST /api/rag/v1/ask
+GET  /api/rag/v1/health
+```
+
+The UI sends:
+
+```json
+{
+  "query": "user question"
+}
+```
+
+The UI expects:
+
+```json
+{
+  "query": "user question",
+  "response": "assistant response",
+  "processingTimeMs": 1234,
+  "service": "basic"
+}
+```
+
+## CORS
+
+If the UI is hosted on a different domain from the Spring Boot API, configure CORS in the backend to allow the deployed frontend origin.
+
+For local development, the frontend runs on:
+
+```text
+http://localhost:4200
+```
+
+The backend runs on:
+
+```text
+http://localhost:8081
+```
+
+## Deployment Checklist
+
+- Set the production API URL in `environment.prod.ts`.
+- Build with `npm run build`.
+- Upload `dist/chat-ui/browser/` to the static host.
+- Verify `GET /api/rag/v1/health` from the deployed environment.
+- Confirm the backend allows CORS from the frontend domain.
+- Ask a known sample question and verify the response is grounded in ingested documents.

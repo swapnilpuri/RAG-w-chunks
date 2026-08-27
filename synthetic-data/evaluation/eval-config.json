@@ -1,0 +1,13 @@
+﻿{
+  "rag_api_url": "http://localhost:8081/api/rag/v1/ask",
+  "enhanced_rag_api_url": "http://localhost:8081/api/rag/v1/ask-enhanced",
+  "default_mode": "enhanced",
+  "expected_embedding_dimension": 3072,
+  "checks": {
+    "answer_contains": true,
+    "out_of_scope_refusal": true,
+    "expected_source": true,
+    "latency_ms": true
+  },
+  "latency_budget_ms": 10000
+}

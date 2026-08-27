@@ -1,98 +1,109 @@
 # Maven Multi-Module Structure
 
-This project has been restructured as a Maven multi-module project to enable unified build management across all Java components.
+This repository uses a Maven parent project for the Java backend services. The Angular frontend remains an independent Node/Angular project under `chat-ui`.
 
-## Project Structure
+## Structure
 
+```text
+RAG-w-chunks/
+  pom.xml
+  demorag/
+    pom.xml
+    src/
+  document-streaming-ingestion-service/
+    pom.xml
+    src/
+  chat-ui/
+    package.json
+    src/
 ```
-/workspace (root)
-├── pom.xml                                    # Parent POM
-├── demorag/                                   # RAG Demo Service Module
-│   ├── pom.xml                               # Child POM
-│   └── src/
-└── document-streaming-ingestion-service/     # Document Ingestion Service Module
-    ├── pom.xml                               # Child POM
-    └── src/
+
+## Parent POM
+
+The root `pom.xml` defines shared build and dependency management for the Java modules.
+
+Key settings:
+
+- Group ID: `com.rag.learning`
+- Artifact ID: `rag-parent`
+- Packaging: `pom`
+- Spring Boot parent: `3.5.6`
+- Java version: `21`
+- Spring AI version: `1.1.0-M3`
+- Apache Camel version: `4.2.0`
+
+## Java Modules
+
+### `demorag`
+
+Purpose: RAG query API.
+
+Responsibilities:
+
+- Accept user questions through REST endpoints
+- Generate query embeddings
+- Retrieve relevant chunks from pgvector
+- Build grounded context
+- Call Gemini for answer generation
+
+Default port:
+
+```text
+8081
 ```
 
-## Key Changes Made
+### `document-streaming-ingestion-service`
 
-### 1. Parent POM (`/workspace/pom.xml`)
-- **GroupId**: `com.rag.learning`
-- **ArtifactId**: `rag-parent`
-- **Packaging**: `pom`
-- **Parent**: `spring-boot-starter-parent:3.5.6`
-- **Modules**: Both `demorag` and `document-streaming-ingestion-service`
+Purpose: document ingestion pipeline.
 
-### 2. Centralized Dependency Management
-The parent POM now manages versions for common dependencies:
-- Spring AI: `1.1.0-M3`
-- Apache Camel: `4.2.0`
-- PGVector: `0.1.4`
-- OkHttp: `4.12.0`
-- Apache POI: `5.2.5`
-- PDFBox: `3.0.0`
-- Google Cloud AI Platform: `3.34.0`
+Responsibilities:
 
-### 3. Standardized GroupId
-Both modules now use the consistent groupId: `com.rag.learning`
+- Watch an input folder with Apache Camel
+- Extract text from documents
+- Split content into chunks
+- Generate Gemini embeddings
+- Store document metadata and chunk vectors in PostgreSQL
 
-## How to Build
+## Build Commands
 
-### Build All Modules
-From the root directory (`/workspace`):
+Build and test all Java modules from the repository root:
+
 ```bash
-# Using Maven (if installed)
-mvn clean install
-
-# Using Maven wrapper from any sub-module
-./demorag/mvnw clean install
-# or
-./document-streaming-ingestion-service/mvnw clean install
+mvn clean test
 ```
 
-### Build Individual Modules
-From the specific module directory:
+Package all Java modules:
+
 ```bash
-# Build only demorag
-cd demorag
-./mvnw clean install
-
-# Build only document-streaming-ingestion-service
-cd document-streaming-ingestion-service
-./mvnw clean install
+mvn clean package
 ```
 
-### Common Maven Commands
-- `mvn clean` - Clean all modules
-- `mvn compile` - Compile all modules
-- `mvn test` - Run tests for all modules
-- `mvn package` - Package all modules
-- `mvn install` - Install all modules to local repository
+Build a single module:
 
-## Benefits of This Structure
+```bash
+mvn -pl demorag clean test
+mvn -pl document-streaming-ingestion-service clean test
+```
 
-1. **Unified Build Process**: Single command builds all Java components
-2. **Consistent Dependency Versions**: Centralized version management prevents conflicts
-3. **Simplified CI/CD**: One build pipeline can handle all modules
-4. **Better IDE Support**: IDEs can recognize the multi-module structure
-5. **Shared Configuration**: Common build plugins and settings are inherited
+Build a module and its required dependencies:
 
-## Module Details
+```bash
+mvn -pl demorag -am clean test
+```
 
-### demorag
-- **Purpose**: RAG (Retrieval-Augmented Generation) demo service
-- **Key Dependencies**: Spring Boot, Spring AI, Google GenAI, PGVector
-- **Port**: Configured in application properties
+## Frontend
 
-### document-streaming-ingestion-service
-- **Purpose**: Document processing and ingestion service
-- **Key Dependencies**: Spring Boot, Apache Camel, PDFBox, Apache POI, PGVector
-- **Features**: File processing, document parsing, vector storage
+The Angular UI is not part of the Maven reactor. Build it separately:
+
+```bash
+cd chat-ui
+npm install
+npm run build
+```
 
 ## Notes
 
-- The `chat-ui` Angular project remains independent and is not part of the Maven build
-- Each module retains its individual Maven wrapper for standalone builds
-- All existing functionality is preserved
-- Docker Compose configurations remain unchanged
+- Keep common Java dependency versions in the parent POM when possible.
+- Keep module-specific dependencies in the module POMs.
+- Do not commit local `.env` files or credentials.
+- Use the root README for end-to-end setup and the module READMEs for focused development notes.

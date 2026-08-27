@@ -1,59 +1,104 @@
-# ChatUi
+# RAG Chat UI
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.3.6.
+Angular frontend for the RAG pipeline in this repository. The UI provides a simple chat experience for asking questions against the documents ingested by the backend services.
 
-## Development server
+## Backend Contract
 
-To start a local development server, run:
+The UI calls the RAG API exposed by the `demorag` Spring Boot service:
 
-```bash
-ng serve
+```text
+POST http://localhost:8081/api/rag/v1/ask
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+Request body:
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
-
-```bash
-ng generate component component-name
+```json
+{
+  "query": "What are the main components of Apache Spark?"
+}
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Response shape:
 
-```bash
-ng generate --help
+```json
+{
+  "query": "What are the main components of Apache Spark?",
+  "response": "Based on the provided documents...",
+  "processingTimeMs": 2341,
+  "service": "basic"
+}
 ```
 
-## Building
+## Configuration
 
-To build the project run:
+The backend URL is configured in:
 
-```bash
-ng build
+```text
+src/environments/environment.ts
+src/environments/environment.prod.ts
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+Default local configuration:
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
+```typescript
+export const environment = {
+  production: false,
+  apiUrl: 'http://localhost:8081'
+};
 ```
 
-## Running end-to-end tests
+## Local Development
 
-For end-to-end (e2e) testing, run:
+Install dependencies:
 
 ```bash
-ng e2e
+npm install
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+Start the development server:
 
-## Additional Resources
+```bash
+npm start
+```
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Open:
+
+```text
+http://localhost:4200
+```
+
+## Build
+
+```bash
+npm run build
+```
+
+The production build is written to:
+
+```text
+dist/chat-ui/browser/
+```
+
+## Test
+
+```bash
+npm test -- --watch=false
+```
+
+## Project Structure
+
+```text
+src/app/
+  app.ts              Main chat component
+  app.html            Chat template
+  app.css             Chat styling
+  services/chat.ts    API client for the RAG backend
+
+src/environments/
+  environment.ts
+  environment.prod.ts
+```
+
+## Notes for Portfolio Reviewers
+
+This UI is intentionally lightweight. Its purpose is to demonstrate the end-to-end RAG flow from a user question to a grounded backend response. Future improvements could include source citations, retrieval metadata, conversation reset, markdown rendering, and streaming token display.
